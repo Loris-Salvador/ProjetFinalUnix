@@ -1,5 +1,7 @@
 .SILENT:
 
+EXECUTABLES = AccesBD Caddie Client CreationBD Gerant Publicite Serveur
+
 
 all:	maingerant.o windowgerant.o moc_windowgerant.o mainclient.o windowclient.o moc_windowclient.o FichierClient.o
 		g++ -Wno-unused-parameter -o Gerant maingerant.o windowgerant.o moc_windowgerant.o /usr/lib64/libQt5Widgets.so /usr/lib64/libQt5Gui.so /usr/lib64/libQt5Core.so /usr/lib64/libGL.so -L/usr/lib64/mysql -lmysqlclient -lpthread -lz -lm -lrt -lssl -lcrypto -ldl
@@ -36,5 +38,8 @@ moc_windowclient.o:	moc_windowclient.cpp
 
 clean:
 	rm *o
+
+clobber:
+	rm -f $(EXECUTABLES) *o
 
 
