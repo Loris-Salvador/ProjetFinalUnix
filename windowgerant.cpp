@@ -14,7 +14,7 @@ using namespace std;
 int idArticleSelectionne = -1;
 MYSQL *connexion;
 MYSQL_RES  *resultat;
-MYSQL_ROW  Tuple;
+MYSQL_ROW  ligne;
 char requete[200];
 int idSem;
 int idQ;
@@ -76,35 +76,19 @@ WindowGerant::WindowGerant(QWidget *parent) : QMainWindow(parent),ui(new Ui::Win
       exit(1);
     }
 
-    MYSQL_ROW ligne;
 
     // Mise à jour du stock en BD
 
     while ((ligne = mysql_fetch_row(resultat)) != NULL) 
     {
-      // string tmp(ligne[2]);
-      // size_t x = tmp.find(",");
-      // if (x != string::npos) tmp.replace(x,1,".");
+      string tmp(ligne[2]);
+      size_t x = tmp.find(".");
+      if (x != string::npos) tmp.replace(x,1,",");
 
-      // puts(ligne[2]);
-
-      // printf("%f", atof(ligne[2]));
-
-      float prix = atof(ligne[2]);
-
-      printf("%f", prix);
-
-      
-      
-      ajouteArticleTablePanier(atoi(ligne[0]),ligne[1],prix,atoi(ligne[3]));
+   
+      ajouteArticleTablePanier(atoi(ligne[0]),ligne[1],atof(tmp.data()),atoi(ligne[3]));
     }                  
-                 
-
-    // Exemples à supprimer
-//     ajouteArticleTablePanier(1,"pommes",2.53,25);
-//     ajouteArticleTablePanier(2,"oranges",5.83,1);
-//     ajouteArticleTablePanier(3,"bananes",1.85,12);
-//     ajouteArticleTablePanier(4,"cerises",5.44,17);
+                
 }
 
 WindowGerant::~WindowGerant()
@@ -236,6 +220,11 @@ void WindowGerant::on_pushButtonModifier_clicked()
   //cerr << "Prix  : --"  << getPrix() << "--" << endl;
   //cerr << "Stock : --"  << getStock() << "--" << endl;
 
+  if(getIndiceArticleSelectionne()==-1)
+    return;
+
+  
+
   char Prix[20];
   sprintf(Prix,"%f",getPrix());
   string tmp(Prix);
@@ -246,4 +235,76 @@ void WindowGerant::on_pushButtonModifier_clicked()
 
   // Mise a jour table BD
   // TO DO
+
+  int test=0;
+
+  sprintf(requete,"select * from UNIX_FINAL");
+  if(mysql_query(connexion,requete) != 0)
+  {
+    fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
+    exit(1);
+  }
+  if((resultat = mysql_store_result(connexion))==NULL)
+  {
+    fprintf(stderr, "Erreur de mysql_store_result: %s\n",mysql_error(connexion));
+    exit(1);
+  }
+
+  while (test==0 && (ligne = mysql_fetch_row(resultat)) != NULL) 
+  {
+    
+    if(atoi(ligne[0]) == idArticleSelectionne)
+    {
+      test=1;
+    }
+  }                  
+
+  if(test==1)
+  {
+
+      sprintf(requete,"update UNIX_FINAL set prix=%s where id=%d", tmp.data(), idArticleSelectionne);
+
+      if(mysql_query(connexion,requete) != 0)
+      {
+        fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
+        exit(1);
+      }
+
+      sprintf(requete,"update UNIX_FINAL set stock=%d where id=%d", getStock(), idArticleSelectionne);
+
+      if(mysql_query(connexion,requete) != 0)
+      {
+        fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
+        exit(1);
+      }
+  }
+
+  videTableStock();
+
+  sprintf(requete,"select * from UNIX_FINAL");
+  if(mysql_query(connexion,requete) != 0)
+  {
+    fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
+    exit(1);
+  }
+  if((resultat = mysql_store_result(connexion))==NULL)
+  {
+    fprintf(stderr, "Erreur de mysql_store_result: %s\n",mysql_error(connexion));
+    exit(1);
+  }
+
+
+  // Mise à jour du stock en BD
+
+  while ((ligne = mysql_fetch_row(resultat)) != NULL) 
+  {
+    string tmp(ligne[2]);
+    size_t x = tmp.find(".");
+    if (x != string::npos) tmp.replace(x,1,",");
+
+  
+    ajouteArticleTablePanier(atoi(ligne[0]),ligne[1],atof(tmp.data()),atoi(ligne[3]));
+  } 
+
+  
 }

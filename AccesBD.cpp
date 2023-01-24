@@ -129,7 +129,7 @@ int main(int argc,char* argv[])
                         strcpy(reponse.data2, ligne[1]);
                         strcpy(reponse.data3, ligne[3]);
                         strcpy(reponse.data4, ligne[4]);
-                        reponse.data5=atof(ligne[2]);
+                        reponse.data5=atof(ligne[2]); //bizarre ca devrait pas marcher
                       }
                       else
                       {
