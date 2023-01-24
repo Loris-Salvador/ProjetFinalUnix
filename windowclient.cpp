@@ -778,6 +778,13 @@ void handlerSIGUSR1(int sig)
                     break;  
 
         case TIME_OUT : // TO DO (étape 6)
+
+                    logged = false;
+
+                    w->dialogueErreur("TIME OUT", "Vous avez ete deconnecté");
+                    
+                    w->logoutOK();
+                    
                     break;
 
         case BUSY : // TO DO (étape 7)

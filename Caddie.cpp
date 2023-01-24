@@ -109,8 +109,12 @@ int main(int argc,char* argv[])
       exit(1);
     }
 
+    alarm(15);
+
     test=0;
     same=0;
+
+
 
     switch(m.requete)
     {
@@ -420,10 +424,65 @@ void handlerSIGALRM(int sig)
 {
   fprintf(stderr,"(CADDIE %d) Time Out !!!\n",getpid());
 
+  MESSAGE m;
+  int i, ret;
+
   // Annulation du caddie et mise à jour de la BD
   // On envoie a AccesBD autant de requetes CANCEL qu'il y a d'articles dans le panier
 
+  m.expediteur=getpid();
+  m.requete=CANCEL;
+
+  for(i=0;i<nbArticles;i++)
+  {
+
+    m.data1=articles[i].id;
+
+    sprintf(m.data2, "%d", articles[i].stock);
+    
+    // on transmet la requete à AccesBD
+
+
+    fflush(stdout);//utilité??
+
+    if ((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
+    {
+      perror("Erreur de write (1)");
+      exit(1);
+    }
+  }
+
+
+  // On vide le panier
+
+  for(i=0;i<nbArticles;i++)
+  {
+    articles[i].id=0;
+    articles[i].stock=0;
+    articles[i].prix=0;
+    strcpy(articles[i].intitule, "");
+    strcpy(articles[i].image, "");
+  }
+
+  nbArticles=0;
+
   // Envoi d'un Time Out au client (s'il existe toujours)
+
+  m.requete=TIME_OUT;
+  m.type=pidClient;
+
+  if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+  {
+    perror("Erreur de msgsnd");
+    exit(1);
+  } 
+
+  if(kill(pidClient,SIGUSR1) == -1)
+  {
+    perror ("Erreur de kill");
+    exit(1);
+  }    
+
          
   exit(0);
 }

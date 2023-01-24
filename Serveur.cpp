@@ -623,6 +623,7 @@ void HandlerSIGCHLD(int sig)
   if(i<6)
   {
     tab->connexions[i].pidCaddie=0;
+    strcpy(tab->connexions[i].nom, "");
   }
   else
     fprintf(stderr,"pas trouvé");
