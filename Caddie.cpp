@@ -11,13 +11,19 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/sem.h>
 #include <mysql.h>
+#include "Semaphore.h"
 #include "protocole.h" // contient la cle et la structure d'un message
 
 int idQ;
 
+int numSem;
+
 ARTICLE articles[10];
 int nbArticles = 0;
+
+int idSem;
 
 int fdWpipe;
 int pidClient;
@@ -33,8 +39,34 @@ int main(int argc,char* argv[])
   sigaddset(&mask,SIGINT);
   sigprocmask(SIG_SETMASK,&mask,NULL);
 
+
   // Armement des signaux
   // TO DO
+
+/////////////////
+
+  struct sigaction A;
+  A.sa_handler =handlerSIGALRM;
+  sigemptyset(&A.sa_mask);
+  A.sa_flags = 0;
+
+  if(sigaction(SIGALRM,&A,NULL) == -1)
+  {
+    perror("Erreur de sigaction");
+    exit(1);
+  }
+
+///////////////////
+
+   //Semaphore
+
+    if ((idSem = semget(CLE,6, IPC_EXCL | 0600)) == -1)
+    {
+      perror("Erreur de semget");
+      exit(1);
+    }
+
+   /////////////
 
   // Recuperation de l'identifiant de la file de messages
   fprintf(stderr,"(CADDIE %d) Recuperation de l'id de la file de messages\n",getpid());
@@ -85,6 +117,14 @@ int main(int argc,char* argv[])
       case LOGIN :    // TO DO
                       fprintf(stderr,"(CADDIE %d) Requete LOGIN reçue de %d\n",getpid(),m.expediteur);
                       
+                      numSem=int(m.data5);
+
+                      if (semctl(idSem,numSem,SETVAL, 0) == -1)
+                      {
+                        perror("Erreur de semctl (1)");
+                        exit(1);
+                      }
+
                       pidClient=m.expediteur;
 
                       break;
@@ -194,7 +234,6 @@ int main(int argc,char* argv[])
                         }
                       }
                                           
-                      // Envoi de la reponse au client
 
                       m.type=pidClient;
 
@@ -222,8 +261,8 @@ int main(int argc,char* argv[])
                       for(i=0 ; i<nbArticles ;i++)
                       {
 
-
-                       usleep(5000);
+                      
+                        // sleep(1);
 
                         reponse.data1=articles[i].id;
                         strcpy(reponse.data2, articles[i].intitule);
@@ -241,17 +280,70 @@ int main(int argc,char* argv[])
                         {
                           perror ("Erreur de kill");
                           exit(1);
-                        }        
+                        }    
+
+                        //sleep(1);
+
+                        sem_wait(numSem);
+
+                        //wait();   nope
 
                       }
+
+                      reponse.data1=-1;
+
+
+                      if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                      {
+                        perror("Erreur de msgsnd");
+                        exit(1);
+                      } 
+
+                      if(kill(pidClient,SIGUSR1) == -1)
+                      {
+                        perror ("Erreur de kill");
+                        exit(1);
+                      }    
+
                       break;
 
       case CANCEL :   // TO DO
                       fprintf(stderr,"(CADDIE %d) Requete CANCEL reçue de %d\n",getpid(),m.expediteur);
+                      
+                      i=m.data1;
 
+                      m.data1=articles[i].id;
+
+                      sprintf(m.data2, "%d", articles[i].stock);
+                      
                       // on transmet la requete à AccesBD
 
+                      
+                      m.expediteur=getpid();
+
+                      fflush(stdout);//utilité??
+
+                      if ((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
+                      {
+                        perror("Erreur de write (1)");
+                        exit(1);
+                      }
+
+
                       // Suppression de l'aricle du panier
+
+                      for(;i<9;i++)
+                        articles[i]=articles[i+1];
+
+                      articles[i].id=0;
+                      articles[i].stock=0;
+                      articles[i].prix=0;
+                      strcpy(articles[i].intitule, "");
+                      strcpy(articles[i].image, "");
+
+                      nbArticles--;
+
+                      
                       break;
 
       case CANCEL_ALL : // TO DO
@@ -259,13 +351,60 @@ int main(int argc,char* argv[])
 
                       // On envoie a AccesBD autant de requeres CANCEL qu'il y a d'articles dans le panier
 
+                      m.expediteur=getpid();
+                      m.requete=CANCEL;
+
+                      for(i=0;i<nbArticles;i++)
+                      {
+
+                        m.data1=articles[i].id;
+
+                        sprintf(m.data2, "%d", articles[i].stock);
+                        
+                        // on transmet la requete à AccesBD
+
+                    
+                        fflush(stdout);//utilité??
+
+                        if ((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
+                        {
+                          perror("Erreur de write (1)");
+                          exit(1);
+                        }
+                      }
+
+
                       // On vide le panier
+
+                      for(i=0;i<nbArticles;i++)
+                      {
+                        articles[i].id=0;
+                        articles[i].stock=0;
+                        articles[i].prix=0;
+                        strcpy(articles[i].intitule, "");
+                        strcpy(articles[i].image, "");
+                      }
+
+                      nbArticles=0;
+
+
+
                       break;
 
       case PAYER :    // TO DO
                       fprintf(stderr,"(CADDIE %d) Requete PAYER reçue de %d\n",getpid(),m.expediteur);
+                      
+                      for(i=0;i<nbArticles;i++)
+                      {
+                        articles[i].id=0;
+                        articles[i].stock=0;
+                        articles[i].prix=0;
+                        strcpy(articles[i].intitule, "");
+                        strcpy(articles[i].image, "");
+                      }
 
-                      // On vide le panier
+                      nbArticles=0;
+
                       break;
       case EXIT  :    
                       fprintf(stderr,"(CADDIE %d) Requete EXIT reçue de %d\n",getpid(),m.expediteur);

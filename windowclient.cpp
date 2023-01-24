@@ -11,9 +11,15 @@ using namespace std;
 #include <sys/ipc.h>
 #include <sys/msg.h>
 #include <sys/shm.h>
+#include "Semaphore.h"
 #include <signal.h>
+#include <sys/sem.h>
 
 extern WindowClient *w;
+
+int idSem;
+
+int numSem;
 
 int idQ, idShm;
 bool logged=false;
@@ -53,6 +59,16 @@ WindowClient::WindowClient(QWidget *parent) : QMainWindow(parent), ui(new Ui::Wi
       perror("(CLIENT) Erreur de msgget");
       exit(1);
     }
+
+    //Semaphore
+
+    if ((idSem = semget(CLE,6, IPC_EXCL | 0600)) == -1)
+    {
+      perror("Erreur de semget");
+      exit(1);
+    }
+
+
 
     // Recuperation de l'identifiant de la mémoire partagée
     //fprintf(stderr,"(CLIENT %d) Recuperation de l'id de la mémoire partagée\n",getpid());
@@ -404,10 +420,22 @@ void WindowClient::on_pushButtonLogout_clicked()
 
     // Envoi d'une requete de logout au serveur
     // TO DO
+
+
+
     MESSAGE m;
 
     m.type=1;
     m.expediteur=getpid();
+    m.requete=CANCEL_ALL;
+
+    if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+    {
+      perror("Erreur de msgsnd");
+      exit(1);
+    }
+
+
     m.requete=LOGOUT;
 
     if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
@@ -491,46 +519,28 @@ void WindowClient::on_pushButtonSupprimer_clicked()
     // TO DO (étape 6)
     // Envoi d'une requete CANCEL au serveur
 
-    // int indArt=getIndiceArticleSelectionne();
+    int indArt=getIndiceArticleSelectionne();
 
-    // MESSAGE m;
+    MESSAGE m;
 
-    // if(indArt==-1)
-    // {
-    //   dialogueErreur("ERREUR", "Pas d'article selectionne");
-    //   return;
-    // }
+    if(indArt==-1)
+    {
+      dialogueErreur("ERREUR", "Pas d'article selectionne");
+      return;
+    }
 
-    // m.type=1;
-    // m.requete=CANCEL;
-    // m.expediteur=getpid();
+    m.type=1;
+    m.requete=CANCEL;
+    m.expediteur=getpid();
 
-    // m.data1=indArt;
+    m.data1=indArt;
 
-    // if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
-    // {
-    //   perror("Erreur de msgsnd");
-    //   exit(1);
-    // }
+    if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+    {
+      perror("Erreur de msgsnd");
+      exit(1);
+    }
 
-    // //sleep(3);
-
-    // m.requete=CADDIE;
-
-    // m.data1=articleEnCours.id;
-    // strcpy(m.data2, "0");
-
-    // if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
-    // {
-    //   perror("Erreur de msgsnd");
-    //   exit(1);
-    // }
-
-    // if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
-    // {
-    //   perror("Erreur de msgsnd");
-    //   exit(1);
-    // }
 
 
     // Mise à jour du caddie
@@ -540,7 +550,13 @@ void WindowClient::on_pushButtonSupprimer_clicked()
 
     // Envoi requete CADDIE au serveur
 
+    m.requete=CADDIE;
 
+    if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+    {
+      perror("Erreur de msgsnd");
+      exit(1);
+    }
 
 
 }
@@ -551,12 +567,39 @@ void WindowClient::on_pushButtonViderPanier_clicked()
     // TO DO (étape 6)
     // Envoi d'une requete CANCEL_ALL au serveur
 
+
+    MESSAGE m;
+
+    m.type=1;
+    m.requete=CANCEL_ALL;
+    m.expediteur=getpid();
+
+
+    if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+    {
+      perror("Erreur de msgsnd");
+      exit(1);
+    }
+
+
+
+
+
     // Mise à jour du caddie
     w->videTablePanier();
     totalCaddie = 0.0;
     w->setTotal(-1.0);
 
     // Envoi requete CADDIE au serveur
+
+    m.requete=CADDIE;
+
+    if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+    {
+      perror("Erreur de msgsnd");
+      exit(1);
+    }
+
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -564,6 +607,20 @@ void WindowClient::on_pushButtonPayer_clicked()
 {
     // TO DO (étape 7)
     // Envoi d'une requete PAYER au serveur
+
+    MESSAGE m;
+
+    m.type=1;
+    m.requete=PAYER;
+    m.expediteur=getpid();
+
+
+    if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+    {
+      perror("Erreur de msgsnd");
+      exit(1);
+    }
+
 
     char tmp[100];
     sprintf(tmp,"Merci pour votre paiement de %.2f ! Votre commande sera livrée tout prochainement.",totalCaddie);
@@ -575,6 +632,14 @@ void WindowClient::on_pushButtonPayer_clicked()
     w->setTotal(-1.0);
 
     // Envoi requete CADDIE au serveur
+
+    // m.requete=CADDIE;
+
+    // if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+    // {
+    //   perror("Erreur de msgsnd");
+    //   exit(1);
+    // }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -585,7 +650,7 @@ void handlerSIGUSR1(int sig)
     MESSAGE m;
     MESSAGE reponse;
   
-    if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),getpid(),0) != -1)  // !!! a modifier en temps voulu !!!
+    if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),getpid(),IPC_NOWAIT) != -1)  // !!! a modifier en temps voulu !!!
     {
       switch(m.requete)
       {
@@ -595,6 +660,18 @@ void handlerSIGUSR1(int sig)
                       logged=true;
                       w->loginOK();
                       w->dialogueMessage("Login", m.data4);
+
+
+                      numSem=int(m.data5);
+                      fprintf(stderr, "\nMDATA5   %d", numSem);
+
+                      
+
+                      if (semctl(idSem,numSem,SETVAL, 0) == -1)
+                      {
+                        perror("Erreur de semctl (1)");
+                        exit(1);
+                      }
 
 
                       reponse.expediteur=getpid();
@@ -607,6 +684,8 @@ void handlerSIGUSR1(int sig)
                         perror("Erreur de msgsnd");
                         exit(1);
                       }
+
+                      
 
                     }
                     else
@@ -663,33 +742,38 @@ void handlerSIGUSR1(int sig)
                         exit(1);
                       }
 
-                      
 
-                      //mettre a jour stock en direct??
-
-                      // sleep(3);
-
-                      // m.type=1;
-                      // m.expediteur=getpid();
-                      // m.requete=CONSULT;
-
-                      // m.data1=articleEnCours.id;
-                      // strcpy(m.data2, "0");
-
-                      // if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
-                      // {
-                      //   perror("Erreur de msgsnd");
-                      //   exit(1);
-                      // }
-                      ///////////////////////////////
                     }
                     break;
 
         case CADDIE : // TO DO (étape 5)
 
-                    w->ajouteArticleTablePanier(m.data2, m.data5, atoi(m.data3));
-                    totalCaddie=totalCaddie+(atoi(m.data3)*m.data5);
-                    w->setTotal(totalCaddie);
+                      if(m.data1!=-1)
+                      {
+                        w->ajouteArticleTablePanier(m.data2, m.data5, atoi(m.data3));
+                        totalCaddie=totalCaddie+(atoi(m.data3)*m.data5);
+                        w->setTotal(totalCaddie);
+                        sem_signal(numSem);
+                      }
+                      else
+                      {
+                        // exit(0);
+                        m.type=1;
+                        m.expediteur=getpid();
+                        m.requete=CONSULT;
+
+                        m.data1=articleEnCours.id;
+                        //strcpy(m.data2, "0");
+
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd");
+                          exit(1);
+                        }
+                      }
+
+        
+
 
                     break;  
 

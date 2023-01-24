@@ -12,6 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <setjmp.h>
+#include "Semaphore.h"
 #include "protocole.h" // contient la cle et la structure d'un message
 
 #include "FichierClient.h"
@@ -289,6 +290,10 @@ int main()
                         reponse.type=idCaddie;
                         reponse.requete=LOGIN;
 
+                        for (i=0 ; i<6 && tab->connexions[i].pidFenetre!=m.expediteur; i++);
+
+                        reponse.data5=i;
+
                         if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
                         {
                           perror("Erreur de msgsnd serv");
@@ -308,16 +313,23 @@ int main()
 
                         reponse.data1=1;
                         strcpy(reponse.data4, log);
+                        
+                        //reponse.data5=i;
                       }
                       else//login echoué
                       {
                         reponse.data1=0;
                         strcpy(reponse.data4, log);
-                      }
+                      } 
+
+
+                      
 
                       reponse.type=m.expediteur;
                       reponse.expediteur=getpid();
                       reponse.requete=LOGIN;
+
+
 
                       if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
                       {
@@ -425,18 +437,49 @@ int main()
       case CANCEL :   // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete CANCEL reçue de %d\n",getpid(),m.expediteur);
                       
-                      //for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
+                      for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
 
-                      
+                      reponse.type=tab->connexions[i].pidCaddie;
+                      reponse.requete=CANCEL;
+                      reponse.data1=m.data1;
+
+                      if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                      {
+                        perror("Erreur de msgsnd CANCEL");
+                        exit(1);
+                      }  
                       
                       break;
 
       case CANCEL_ALL : // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete CANCEL_ALL reçue de %d\n",getpid(),m.expediteur);
+
+                      for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
+
+                      reponse.type=tab->connexions[i].pidCaddie;
+                      reponse.requete=CANCEL_ALL;
+
+                      if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                      {
+                        perror("Erreur de msgsnd CANCEL_ALL");
+                        exit(1);
+                      }  
                       break;
 
       case PAYER : // TO DO
-                      fprintf(stderr,"(SERVEUR %d) Requete PAYER reçue de %d\n",getpid(),m.expediteur);
+                      fprintf(stderr,"(SERVEUR %d)Requete PAYER reçue de %d\n",getpid(),m.expediteur);
+
+                      for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
+
+                      reponse.type=tab->connexions[i].pidCaddie;
+                      reponse.requete=PAYER;
+
+                      if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                      {
+                        perror("Erreur de msgsnd PAYER");
+                        exit(1);
+                      }  
+
                       break;
 
       case NEW_PUB :  // TO DO

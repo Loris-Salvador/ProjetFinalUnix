@@ -60,7 +60,7 @@ int main(int argc,char* argv[])
 
 
   MYSQL_RES  *resultat;
-  MYSQL_RES  *resultat2;  
+  //MYSQL_RES  *resultat2;  
 
   // sprintf(requete,"select * from UNIX_FINAL");
   // if(mysql_query(connexion,requete) != 0)
@@ -166,7 +166,7 @@ int main(int argc,char* argv[])
                         fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
                         exit(1);
                       }
-                      if((resultat2 = mysql_store_result(connexion))==NULL)
+                      if((resultat = mysql_store_result(connexion))==NULL)
                       {
                         fprintf(stderr, "Erreur de mysql_store_result: %s\n",mysql_error(connexion));
                         exit(1);
@@ -174,7 +174,7 @@ int main(int argc,char* argv[])
 
                       i=0;
 
-                      while (test==0 && (ligne = mysql_fetch_row(resultat2)) != NULL) 
+                      while (test==0 && (ligne = mysql_fetch_row(resultat)) != NULL) 
                       {
                         
                         if(atoi(ligne[0]) == m.data1)
@@ -199,9 +199,9 @@ int main(int argc,char* argv[])
                             exit(1);
                           }
 
-                          mysql_data_seek(resultat2, (i-1));
+                          mysql_data_seek(resultat, (i-1));
                           
-                          ligne = mysql_fetch_row(resultat2);
+                          ligne = mysql_fetch_row(resultat);
 
                           strcpy(reponse.data3, m.data2);
 
@@ -221,7 +221,7 @@ int main(int argc,char* argv[])
                         reponse.type=m.expediteur;
 
                   
-                        mysql_free_result(resultat2);    
+                        mysql_free_result(resultat);    
 
                         if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
                         {
@@ -236,7 +236,49 @@ int main(int argc,char* argv[])
                       fprintf(stderr,"(ACCESBD %d) Requete CANCEL reçue de %d\n",getpid(),m.expediteur);
                       // Acces BD
 
+                      sprintf(requete,"select * from UNIX_FINAL");
+                      if(mysql_query(connexion,requete) != 0)
+                      {
+                        fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
+                        exit(1);
+                      }
+                      if((resultat = mysql_store_result(connexion))==NULL)
+                      {
+                        fprintf(stderr, "Erreur de mysql_store_result: %s\n",mysql_error(connexion));
+                        exit(1);
+                      }
+
                       // Mise à jour du stock en BD
+
+                      test=0;
+
+                      while (test==0 && (ligne = mysql_fetch_row(resultat)) != NULL) 
+                      {
+                        
+                        if(atoi(ligne[0]) == m.data1)
+                        {
+                          test=1;
+                        }
+                      }                  
+
+                      if(test==1)
+                      {
+                        int stock;
+                        stock=atoi(ligne[3]);
+                        int stock2;
+                        stock2=stock+atoi(m.data2);
+
+
+                        sprintf(requete,"update UNIX_FINAL set stock=%d where id=%d", stock2, atoi(ligne[0]));
+                
+                        if(mysql_query(connexion,requete) != 0)
+                        {
+                          fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
+                          exit(1);
+                        }    
+                      }                 
+
+
                       break;
 
       case EXIT   :   
