@@ -78,8 +78,6 @@ int main()
 
   sigsetjmp(env, 1);
 
-  fprintf(stderr,"YOOO\n");
-
   MESSAGE m;
   m.requete=UPDATE_PUB;
   m.expediteur=getpid();
@@ -94,11 +92,7 @@ int main()
     {
       perror("Erreur de msgsnd PUB");
       exit(1);
-    }
-
-
-
-    
+    } 
 
     sleep(1); 
 
@@ -140,8 +134,6 @@ void handlerSIGUSR1(int sig)
   pShm[51] = '\0';
   int indDebut = 25 - strlen(pub)/2;
   for (int i=0 ; i<strlen(pub) ; i++) pShm[indDebut + i] = pub[i];
-
-  fprintf(stderr,"YOOO2\n");
 
   siglongjmp(env, 1);
 

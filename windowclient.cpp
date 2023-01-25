@@ -51,10 +51,10 @@ WindowClient::WindowClient(QWidget *parent) : QMainWindow(parent), ui(new Ui::Wi
     ui->tableWidgetPanier->horizontalHeader()->setStyleSheet("background-color: lightyellow");
 
     // Recuperation de l'identifiant de la file de messages
-    //fprintf(stderr,"(CLIENT %d) Recuperation de l'id de la file de messages\n",getpid());
+    fprintf(stderr,"(CLIENT %d) Recuperation de l'id de la file de messages\n",getpid());
     // TO DO
 
-    if ((idQ = msgget(CLE,0)) == -1)
+    if((idQ = msgget(CLE,0)) == -1)
     {
       perror("(CLIENT) Erreur de msgget");
       exit(1);
@@ -62,7 +62,7 @@ WindowClient::WindowClient(QWidget *parent) : QMainWindow(parent), ui(new Ui::Wi
 
     //Semaphore
 
-    if ((idSem = semget(CLE,0,0)) == -1)
+    if((idSem = semget(CLE,0,0)) == -1)
     {
       perror("Erreur de semget");
       exit(1);
@@ -71,11 +71,9 @@ WindowClient::WindowClient(QWidget *parent) : QMainWindow(parent), ui(new Ui::Wi
 
 
     // Recuperation de l'identifiant de la mémoire partagée
-    //fprintf(stderr,"(CLIENT %d) Recuperation de l'id de la mémoire partagée\n",getpid());
+    fprintf(stderr,"(CLIENT %d) Recuperation de l'id de la mémoire partagée\n",getpid());
     // TO DO
 
-    // Attachement à la mémoire partagée
-    // TO DO
     if((idShm = shmget(CLE,0,0)) == -1)
     {
       perror("Erreur de shmget");
@@ -84,7 +82,7 @@ WindowClient::WindowClient(QWidget *parent) : QMainWindow(parent), ui(new Ui::Wi
 
     // Attachement à la mémoire partagée
 
-    if ((pShm = (char*)shmat(idShm,NULL,0)) == (char*)-1)
+    if((pShm = (char*)shmat(idShm,NULL,0)) == (char*)-1)
     {
       perror("Erreur de shmat");
       exit(1);
@@ -129,11 +127,6 @@ WindowClient::WindowClient(QWidget *parent) : QMainWindow(parent), ui(new Ui::Wi
       perror("Erreur de msgsnd");
       exit(1);
     }
-
-    // Exemples à supprimer
-    // setPublicite("Promotions sur les concombres !!!");
-    // setArticle("pommes",5.53,18,"pommes.jpg");
-    // ajouteArticleTablePanier("cerises",8.96,2);
 }
 
 WindowClient::~WindowClient()
@@ -367,11 +360,11 @@ void WindowClient::dialogueErreur(const char* titre,const char* message)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void WindowClient::closeEvent(QCloseEvent *event)
 {
-  // TO DO (étape 1)
-  // Envoi d'une requete DECONNECT au serveur
+  //verification login
   if(logged)
     on_pushButtonLogout_clicked();
 
+  //Envoi d'une requete DECONNECT au serveur
   MESSAGE m;
 
   m.type=1;
@@ -384,7 +377,6 @@ void WindowClient::closeEvent(QCloseEvent *event)
     exit(1);
   }
 
-
   exit(0);
 }
 
@@ -394,13 +386,13 @@ void WindowClient::closeEvent(QCloseEvent *event)
 void WindowClient::on_pushButtonLogin_clicked()
 {
     // Envoi d'une requete de login au serveur
-    // TO DO
 
     MESSAGE m;
 
     m.type=1;
     m.expediteur=getpid();
     m.requete=LOGIN;
+    
     m.data1=isNouveauClientChecked();
     strcpy(m.data2, getNom());
     strcpy(m.data3, getMotDePasse());
@@ -793,8 +785,6 @@ void handlerSIGUSR1(int sig)
         case BUSY : // TO DO (étape 7)
 
                     w->dialogueErreur("MAINTENANCE", "Serveur en maintenance, réessayez plus tard… Merci.");
-
-
                     break;
 
         default :

@@ -100,7 +100,6 @@ int main(int argc,char* argv[])
   // Récupération descripteur écriture du pipe
   fdWpipe = atoi(argv[1]);
 
-
   while(1)
   {
     if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),getpid(),0) == -1)

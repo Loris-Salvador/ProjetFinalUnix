@@ -31,7 +31,6 @@ void afficheTab();
 int main()
 {
   // Armement des signaux
-  // TO DO
 
   struct sigaction A;
 
@@ -47,27 +46,6 @@ int main()
 
   struct sigaction A2;
 
-  //semaphore
-  if ((idSem = semget(CLE,0,0)) == -1)
-  {
-    if ((idSem = semget(CLE,7, IPC_CREAT | IPC_EXCL | 0600)) == -1)
-    {
-      perror("Erreur de semget");
-      exit(1);
-    }
- 
-  }
-
-  if (semctl(idSem,6,SETVAL,1) == -1)
-  {
-    perror("Erreur de semctl (2)");
-    exit(1);
-  }
-
-
-  //
-
-  // Armement de SIGCHLD
   A2.sa_handler = HandlerSIGCHLD;
   sigemptyset(&A2.sa_mask);
   A2.sa_flags = 0;
@@ -78,34 +56,53 @@ int main()
     exit(1);
   }
 
-  // Creation des ressources
+  //Creation semaphore
+  if((idSem = semget(CLE,0,0)) == -1)
+  {
+    if((idSem = semget(CLE,7, IPC_CREAT | IPC_EXCL | 0600)) == -1)
+    {
+      perror("Erreur de semget");
+      exit(1);
+    }
+  }
+
+  //set à 1 pour le gérant
+  if(semctl(idSem,6,SETVAL,1) == -1)
+  {
+    perror("Erreur de semctl (2)");
+    exit(1);
+  }
+
   // Creation de la file de message
   fprintf(stderr,"(SERVEUR %d) Creation de la file de messages\n",getpid());
-  if ((idQ = msgget(CLE,IPC_CREAT | IPC_EXCL | 0600)) == -1)  // CLE definie dans protocole.h
+
+
+  if ((idQ = msgget(CLE,0)) == -1)  // CLE definie dans protocole.h
   {
-    perror("(SERVEUR) Erreur de msgget");
-    exit(1);
+    if ((idQ = msgget(CLE,IPC_CREAT | IPC_EXCL | 0600)) == -1) 
+    {
+      perror("(SERVEUR) Erreur de msgget");
+      exit(1);
+    }
   }
 
-  // TO BE CONTINUED
+  //creation memoire partagée  
 
-  if((idShm = shmget(CLE,52,IPC_CREAT | IPC_EXCL | 0600)) == -1)
+  if((idShm = shmget(CLE,0,0)) == -1)
   {
-    perror("Erreur de shmget");
-    exit(1);
+    if((idShm = shmget(CLE,52,IPC_CREAT | IPC_EXCL | 0600)) == -1)
+    {
+      perror("Erreur de shmget");
+      exit(1);
+    }
   }
-
 
   // Creation du pipe
-  // TO DO
   if(pipe(fdPipe) == -1)
   {
     perror("Erreur de pipe");
     exit(1);
   }
-
-
-
 
   // Initialisation du tableau de connexions
   tab = (TAB_CONNEXIONS*) malloc(sizeof(TAB_CONNEXIONS)); 
@@ -117,13 +114,10 @@ int main()
     tab->connexions[i].pidCaddie = 0;
   }
   tab->pidServeur = getpid();
-  tab->pidPublicite = 0;
-
+  //tab->pidPublicite = 0;
 
 
   // Creation du processus Publicite (étape 2)
-  // TO DO
-  //int idFils;
 
   if((idPubli = fork()) == -1)
   {
@@ -140,14 +134,10 @@ int main()
     }
   }
 
-
   tab->pidPublicite=idPubli;
 
 
   // Creation du processus AccesBD (étape 4)
-  // TO DO
-
-  //int idFils2;
 
   char tmp[100];
   sprintf(tmp, "%d", fdPipe[0]);
@@ -177,15 +167,13 @@ int main()
   MESSAGE reponse;
 
   int affiche=0;
-  int idCaddie;
+  int idCaddie, i;
 
 
   while(1)
   {
     if(!affiche)
   	  fprintf(stderr,"(SERVEUR %d) Attente d'une requete...\n",getpid());
-  
-    sigsetjmp(env, 1);
 
     if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),1,0) == -1)
     {
@@ -194,46 +182,40 @@ int main()
       exit(1);
     }
 
-    
     affiche = 0;
-
-
-    int i;
 
     switch(m.requete)
     {
-      case CONNECT :  // TO DO
+      case CONNECT :  
                       fprintf(stderr,"(SERVEUR %d) Requete CONNECT reçue de %d\n",getpid(),m.expediteur);
 
                       for (i=0 ; i<6 && tab->connexions[i].pidFenetre!=0; i++);
 
-                      if(tab->connexions[i].pidFenetre==0)
+                      if(i<6)
                         tab->connexions[i].pidFenetre=m.expediteur;
                       else
                         fprintf(stderr,"plus de place (max 6)");
 
                       break;
 
-      case DECONNECT : // TO DO
+      case DECONNECT : 
                       fprintf(stderr,"(SERVEUR %d) Requete DECONNECT reçue de %d\n",getpid(),m.expediteur);
 
                       for (i=0 ; i<6 && tab->connexions[i].pidFenetre!= m.expediteur; i++);
 
                       if(i<6)
-                      {
                         tab->connexions[i].pidFenetre=0;
-                      }
                       else
                         fprintf(stderr,"pas trouvé");
                         
                       break;
-      case LOGIN :    // TO DO
+      case LOGIN :    
                       fprintf(stderr,"(SERVEUR %d) Requete LOGIN reçue de %d : --%d--%s--%s--\n",getpid(),m.expediteur,m.data1,m.data2,m.data3);
                       
+                      //verification gerant connecté(maintenance)
                       
-                      if (semctl(idSem,6,GETVAL) == 0)
+                      if(semctl(idSem,6,GETVAL) == 0)
                       {
-                        
                         m.type=m.expediteur;
                         m.expediteur=getpid();
                         m.requete=BUSY;
@@ -250,18 +232,17 @@ int main()
                           exit(1);
                         } 
 
-
                         break;
                       }
+
+                      //verification login
                         
-
-
                       int posi, login;
                       char log[50];
 
                       strcpy(log, "login reussi !");
                       posi=estPresent(m.data2);
-                      login=0;
+                      login=0;//0 = ok | 1 = raté
 
                       if(posi==-1)
                       {
@@ -283,6 +264,7 @@ int main()
                       }
                       else//nouveau client pas coché
                       {
+                        //verification client deja connecté
                         for (i=0 ; i<6 && strcmp(tab->connexions[i].nom, m.data2)!=0; i++);
 
                         if(i!=6)
@@ -290,6 +272,7 @@ int main()
                           strcpy(log, "Ce client est deja connecte");
                           login=1;
                         }
+
 
                         if(login==0 && estPresent(m.data2)==0)
                         {
@@ -312,7 +295,7 @@ int main()
                         }
                       }
 
-                      if(login==0)// login reussi
+                      if(login==0//strcmp(log, "login reussi"))// login reussi
                       {
                         //creation processus caddie
                         if((idCaddie = fork()) == -1)
@@ -364,6 +347,7 @@ int main()
                       }
                       else//login echoué
                       {
+                        //
                         reponse.data1=0;
                         strcpy(reponse.data4, log);
                       } 
