@@ -117,12 +117,13 @@ int main(int argc,char* argv[])
 
     switch(m.requete)
     {
-      case LOGIN :    // TO DO
+      case LOGIN :  
                       fprintf(stderr,"(CADDIE %d) Requete LOGIN reçue de %d\n",getpid(),m.expediteur);
                       
+                      //semaphore unique pour chaque relation caddie-client
                       numSem=int(m.data5);
 
-                      if (semctl(idSem,numSem,SETVAL, 0) == -1)
+                      if(semctl(idSem,numSem,SETVAL, 0) == -1)
                       {
                         perror("Erreur de semctl (1)");
                         exit(1);
@@ -134,18 +135,18 @@ int main(int argc,char* argv[])
 
       case LOGOUT :   // TO DO
                       fprintf(stderr,"(CADDIE %d) Requete LOGOUT reçue de %d\n",getpid(),m.expediteur);
-                      //mysql_close(connexion);
+                      mysql_close(connexion);
                       exit(0);
                       break;
 
-      case CONSULT :  // TO DO
+      case CONSULT : 
                       fprintf(stderr,"(CADDIE %d) Requete CONSULT reçue de %d\n",getpid(),m.expediteur);
                   
-                      m.expediteur=getpid();
+                      m.expediteur=getpid();//pour que Acces BD sache a qui renvoyer msg 
 
-                      fflush(stdout);//utilité??
+                      fflush(stdout);
 
-                      if ((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
+                      if((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
                       {
                         perror("Erreur de write (1)");
                         exit(1);
@@ -179,14 +180,14 @@ int main(int argc,char* argv[])
                  
                       break;
 
-      case ACHAT :    // TO DO
+      case ACHAT :    
                       fprintf(stderr,"(CADDIE %d) Requete ACHAT reçue de %d\n",getpid(),m.expediteur);
 
                       // on transfert la requete à AccesBD
 
-                      m.expediteur=getpid();//?????
+                      m.expediteur=getpid();
 
-                      fflush(stdout);//utilité??
+                      fflush(stdout);
 
                       if ((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
                       {
@@ -201,7 +202,7 @@ int main(int argc,char* argv[])
                         perror("(CADDIE) Erreur de msgrcv");
                         exit(1);
                       }
-                      ///etape 5
+                      
 
                       if(strcmp(m.data3, "0")!=0)
                       {
@@ -254,7 +255,7 @@ int main(int argc,char* argv[])
                               
                       break;
 
-      case CADDIE :   // TO DO
+      case CADDIE :   
                       fprintf(stderr,"(CADDIE %d) Requete CADDIE reçue de %d\n",getpid(),m.expediteur);
 
                       reponse.type=pidClient;
@@ -264,9 +265,7 @@ int main(int argc,char* argv[])
                       for(i=0 ; i<nbArticles ;i++)
                       {
 
-                      
-                        // sleep(1);
-
+                  
                         reponse.data1=articles[i].id;
                         strcpy(reponse.data2, articles[i].intitule);
                         sprintf(reponse.data3, "%d", articles[i].stock);
@@ -285,11 +284,7 @@ int main(int argc,char* argv[])
                           exit(1);
                         }    
 
-                        //sleep(1);
-
                         sem_wait(numSem);
-
-                        //wait();   nope
 
                       }
 
@@ -310,7 +305,7 @@ int main(int argc,char* argv[])
 
                       break;
 
-      case CANCEL :   // TO DO
+      case CANCEL :  
                       fprintf(stderr,"(CADDIE %d) Requete CANCEL reçue de %d\n",getpid(),m.expediteur);
                       
                       i=m.data1;
@@ -324,7 +319,7 @@ int main(int argc,char* argv[])
                       
                       m.expediteur=getpid();
 
-                      fflush(stdout);//utilité??
+                      fflush(stdout);
 
                       if ((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
                       {
@@ -349,10 +344,10 @@ int main(int argc,char* argv[])
                       
                       break;
 
-      case CANCEL_ALL : // TO DO
+      case CANCEL_ALL :
                       fprintf(stderr,"(CADDIE %d) Requete CANCEL_ALL reçue de %d\n",getpid(),m.expediteur);
 
-                      // On envoie a AccesBD autant de requeres CANCEL qu'il y a d'articles dans le panier
+                      // On envoie a AccesBD autant de requetes CANCEL qu'il y a d'articles dans le panier
 
                       m.expediteur=getpid();
                       m.requete=CANCEL;
@@ -366,8 +361,7 @@ int main(int argc,char* argv[])
                         
                         // on transmet la requete à AccesBD
 
-                    
-                        fflush(stdout);//utilité??
+                        fflush(stdout);
 
                         if ((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
                         {
@@ -390,11 +384,9 @@ int main(int argc,char* argv[])
 
                       nbArticles=0;
 
-
-
                       break;
 
-      case PAYER :    // TO DO
+      case PAYER :    
                       fprintf(stderr,"(CADDIE %d) Requete PAYER reçue de %d\n",getpid(),m.expediteur);
                       
                       for(i=0;i<nbArticles;i++)
@@ -407,11 +399,6 @@ int main(int argc,char* argv[])
                       }
 
                       nbArticles=0;
-
-                      break;
-      case EXIT  :    
-                      fprintf(stderr,"(CADDIE %d) Requete EXIT reçue de %d\n",getpid(),m.expediteur);
-                      exit(0);
 
                       break;
 
@@ -442,7 +429,7 @@ void handlerSIGALRM(int sig)
     // on transmet la requete à AccesBD
 
 
-    fflush(stdout);//utilité??
+    fflush(stdout);
 
     if ((ret = write(fdWpipe, &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
     {

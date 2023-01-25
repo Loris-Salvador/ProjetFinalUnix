@@ -167,7 +167,7 @@ int main()
   MESSAGE reponse;
 
   int affiche=0;
-  int idCaddie, i;
+  int idCaddie, i, idClient;
 
 
   while(1)
@@ -213,10 +213,12 @@ int main()
                       fprintf(stderr,"(SERVEUR %d) Requete LOGIN reçue de %d : --%d--%s--%s--\n",getpid(),m.expediteur,m.data1,m.data2,m.data3);
                       
                       //verification gerant connecté(maintenance)
+
+                      idClient=m.expediteur;
                       
                       if(semctl(idSem,6,GETVAL) == 0)
                       {
-                        m.type=m.expediteur;
+                        m.type=idClient;
                         m.expediteur=getpid();
                         m.requete=BUSY;
 
@@ -235,14 +237,17 @@ int main()
                         break;
                       }
 
+                      
+
                       //verification login
                         
                       int posi, login;
                       char log[50];
+                      login=0;
 
                       strcpy(log, "login reussi !");
                       posi=estPresent(m.data2);
-                      login=0;//0 = ok | 1 = raté
+                      
 
                       if(posi==-1)
                       {
@@ -273,29 +278,26 @@ int main()
                           login=1;
                         }
 
-
                         if(login==0 && estPresent(m.data2)==0)
                         {
                           strcpy(log, "Client pas trouve");
                           login=1;
                         }
 
-                        if(login==0)
+                        if(login==0 && verifieMotDePasse(posi, m.data3)==-1)
                         {
-                          if(verifieMotDePasse(posi, m.data3)==-1)
-                          {
-                            fprintf(stderr,"Erreur lors de l'ouverture du fichier");
-                            exit(1);   
-                          }
-                          else if(!verifieMotDePasse(posi, m.data3))
-                          {
-                            strcpy(log, "MDP incorrect");
-                            login=1;
-                          }
+                          fprintf(stderr,"Erreur lors de l'ouverture du fichier");
+                          exit(1);   
                         }
+                        else if(login==0 && !verifieMotDePasse(posi, m.data3))
+                        {
+                          strcpy(log, "MDP incorrect");
+                          login=1;
+                        }
+                        
                       }
 
-                      if(login==0//strcmp(log, "login reussi"))// login reussi
+                      if(login==0)// login reussi
                       {
                         //creation processus caddie
                         if((idCaddie = fork()) == -1)
@@ -308,19 +310,19 @@ int main()
                           sprintf(tmp, "%d", fdPipe[1]);
                           if (execl("./Caddie","Caddie", tmp, NULL) == -1)
                           {
-                          perror("Erreur de execl");
-                          exit(1);
+                            perror("Erreur de execl");
+                            exit(1);
                           }
                         }
 
                         //Login au caddie pour lui dire a quel client il est connecte
-
-                        reponse.expediteur=m.expediteur;//==pidclient
+                        reponse.expediteur=idClient;
                         reponse.type=idCaddie;
                         reponse.requete=LOGIN;
 
-                        for (i=0 ; i<6 && tab->connexions[i].pidFenetre!=m.expediteur; i++);
+                        for (i=0 ; i<6 && tab->connexions[i].pidFenetre!=idClient; i++);
 
+                        //numero semaphore(pas demandé)
                         reponse.data5=i;
 
                         if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
@@ -330,36 +332,30 @@ int main()
                         }
 
                         
-                        //mettre pidCaddie au client
+                        //mettre pidCaddie au bon client + nom
 
-                        for (i=0 ;tab->connexions[i].pidFenetre!=m.expediteur; i++);
-
+                        for (i=0 ;tab->connexions[i].pidFenetre!=idClient; i++);
 
                         strcpy(tab->connexions[i].nom, m.data2);
                         tab->connexions[i].pidCaddie=idCaddie;
 
-                        //prepa message client
+                        //prepa message client (reussi)
 
                         reponse.data1=1;
                         strcpy(reponse.data4, log);
                         
-                        //reponse.data5=i;
                       }
                       else//login echoué
                       {
-                        //
                         reponse.data1=0;
                         strcpy(reponse.data4, log);
                       } 
 
+                      //envoie reponse au client
 
-                      
-
-                      reponse.type=m.expediteur;
+                      reponse.type=idClient;
                       reponse.expediteur=getpid();
                       reponse.requete=LOGIN;
-
-
 
                       if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
                       {
@@ -374,8 +370,10 @@ int main()
                                         
                       break; 
 
-      case LOGOUT :   // TO DO
+      case LOGOUT :  
                       fprintf(stderr,"(SERVEUR %d) Requete LOGOUT reçue de %d\n",getpid(),m.expediteur);
+                      
+                      //verification gerant connecté(maintenance)
                       if (semctl(idSem,6,GETVAL) == 0)
                       {
                         
@@ -395,7 +393,6 @@ int main()
                           exit(1);
                         } 
 
-
                         break;
                       }
                       for (i=0 ; i<6 && tab->connexions[i].pidFenetre!= m.expediteur; i++);
@@ -405,7 +402,7 @@ int main()
                         strcpy(tab->connexions[i].nom, "");
                       }
                       else
-                        fprintf(stderr,"pas trouvé");
+                        fprintf(stderr,"pas trouvé");//normalement impossible
 
                       reponse.expediteur=getpid();
                       reponse.type=tab->connexions[i].pidCaddie;
@@ -419,7 +416,7 @@ int main()
                         
                       break;
 
-      case UPDATE_PUB :  // TO DO
+      case UPDATE_PUB :
                         idPubli=m.expediteur;
                         for (i=0 ; i<6 && tab->connexions[i].pidFenetre!=0; i++)
                         {
@@ -435,8 +432,9 @@ int main()
                       
                         break;
 
-      case CONSULT :  // TO DO
+      case CONSULT :  
                       fprintf(stderr,"(SERVEUR %d) Requete CONSULT reçue de %d\n",getpid(),m.expediteur);
+                      //verification gerant connecté(maintenance)
                       if (semctl(idSem,6,GETVAL) == 0)
                       {
                         
@@ -475,7 +473,7 @@ int main()
 
       case ACHAT :    // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete ACHAT reçue de %d\n",getpid(),m.expediteur);
-                      
+                      //verification gerant connecté(maintenance)
                       if (semctl(idSem,6,GETVAL) == 0)
                       {
                         
@@ -508,9 +506,9 @@ int main()
 
                       break;
 
-      case CADDIE :   // TO DO
+      case CADDIE :   
                       fprintf(stderr,"(SERVEUR %d) Requete CADDIE reçue de %d\n",getpid(),m.expediteur);
-                      
+                      //verification gerant connecté(maintenance)
                       if (semctl(idSem,6,GETVAL) == 0)
                       {
                         
@@ -545,8 +543,9 @@ int main()
 
                       break;
 
-      case CANCEL :   // TO DO
+      case CANCEL :   
                       fprintf(stderr,"(SERVEUR %d) Requete CANCEL reçue de %d\n",getpid(),m.expediteur);
+                      //verification gerant connecté(maintenance)
                       if (semctl(idSem,6,GETVAL) == 0)
                       {
                         
@@ -581,11 +580,11 @@ int main()
                       
                       break;
 
-      case CANCEL_ALL : // TO DO
+      case CANCEL_ALL :
                       fprintf(stderr,"(SERVEUR %d) Requete CANCEL_ALL reçue de %d\n",getpid(),m.expediteur);
+                      //verification gerant connecté(maintenance)
                       if (semctl(idSem,6,GETVAL) == 0)
                       {
-                        
                         m.type=m.expediteur;
                         m.expediteur=getpid();
                         m.requete=BUSY;
@@ -615,8 +614,9 @@ int main()
                       }  
                       break;
 
-      case PAYER : // TO DO
+      case PAYER : 
                       fprintf(stderr,"(SERVEUR %d)Requete PAYER reçue de %d\n",getpid(),m.expediteur);
+                      //verification gerant connecté(maintenance)
                       if (semctl(idSem,6,GETVAL) == 0)
                       {
                         
@@ -650,7 +650,7 @@ int main()
 
                       break;
 
-      case NEW_PUB :  // TO DO
+      case NEW_PUB : 
                       fprintf(stderr,"(SERVEUR %d) Requete NEW_PUB reçue de %d\n",getpid(),m.expediteur);
 
                       m.type=idPubli;
@@ -688,7 +688,6 @@ void afficheTab()
                                                       tab->connexions[i].pidCaddie);
   fprintf(stderr,"\n");
 }
-//Handler
 
 void HandlerSIGINT(int sig)
 {
@@ -696,38 +695,41 @@ void HandlerSIGINT(int sig)
   
   fprintf(stderr,"\n(Traitement %d) Reception du signal (%d)\n",getpid(),sig);
 
-  //exit tous les clients parait malin!!!!  
 
   MESSAGE m;
 
   m.expediteur=getpid();
-  m.requete=EXIT;
+  m.requete=LOGOUT;
   int i;
   int idClient;
 
-  // fprintf(stderr,"(SERVEUR)EXIT DES CLIENT(S) et CADDIE(S) CONNECTES\n");
 
-  // for (i=0 ; i<6; i++)
-  // {
-  //   if(tab->connexions[i].pidFenetre != 0)
-  //   {
-  //     idClient=tab->connexions[i].pidFenetre;
-  //     if(kill(idClient, SIGTERM) == -1)
-  //     {
-  //       perror ("Erreur de kill");
-  //       exit(1);
-  //     }      
-  //   }    
-  //   if(tab->connexions[i].pidCaddie != 0)
-  //   {
-  //     if (kill(tab->connexions[i].pidCaddie, SIGTERM) == -1)
-  //     {
-  //       perror("Error sending SIGTERM signal to Publicite process");
-  //       exit(1);
-  //     }
-  //   }
 
-  // }
+  fprintf(stderr,"(SERVEUR)EXIT DES CLIENT(S) et CADDIE(S) CONNECTES\n");
+
+  for (i=0 ; i<6; i++)
+  {
+    if(tab->connexions[i].pidCaddie != 0)
+    {
+      m.type=tab->connexions[i].pidCaddie;
+
+      if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+      {
+        perror("Erreur de msgsnd LOGOUT");
+        exit(1);
+      }  
+    }
+    if(tab->connexions[i].pidFenetre != 0)
+    {
+      idClient=tab->connexions[i].pidFenetre;
+      if(kill(idClient, SIGTERM) == -1)
+      {
+        perror ("Erreur de kill");
+        exit(1);
+      }          
+    }
+  }
+
 
   //exit publi
 
@@ -742,14 +744,14 @@ void HandlerSIGINT(int sig)
 
   //exit AccesBD
 
-
   m.type=idAccesBD;
+  m.requete=EXIT;
 
   int ret;
 
-  fflush(stdout);//utilité??
+  fflush(stdout);
 
-  if ((ret = write(fdPipe[1], &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
+  if((ret = write(fdPipe[1], &m, sizeof(MESSAGE)-sizeof(long))) != sizeof(MESSAGE)-sizeof(long))
   {
     perror("Erreur de write (1)");
     exit(1);
@@ -758,7 +760,7 @@ void HandlerSIGINT(int sig)
   fprintf(stderr,"(SERVEUR)SUPPRESSION FILE DE MESSAGE\n");
 
 
-  if (msgctl(idQ,IPC_RMID,NULL) == -1)
+  if(msgctl(idQ,IPC_RMID,NULL) == -1)
   {
     perror("Erreur de msgctl");
     exit(1);
@@ -766,7 +768,7 @@ void HandlerSIGINT(int sig)
 
   fprintf(stderr,"(SERVEUR)SUPPRESSION ENSEMBLE DE SEMAPHORE\n");
 
-  if (semctl(idSem, 0, IPC_RMID) == -1)
+  if(semctl(idSem, 0, IPC_RMID) == -1)
   {
     perror("Erreur de semctl (2)");
     exit(1);
@@ -784,13 +786,12 @@ void HandlerSIGINT(int sig)
 
   fprintf(stderr,"(SERVEUR)FERMETURE PIPE\n");
 
-
-  if (close(fdPipe[0]) == -1)
+  if(close(fdPipe[0]) == -1)
   {
     perror("Erreur fermeture sortie du pipe");
     exit(1);
   }
-  if (close(fdPipe[1]) == -1)
+  if(close(fdPipe[1]) == -1)
   {
     perror("Erreur fermeture sortie du pipe");
     exit(1);

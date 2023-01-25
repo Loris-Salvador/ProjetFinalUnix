@@ -16,7 +16,6 @@
 
 int idQ, idShm;
 char *pShm;
-sigjmp_buf env;
 void handlerSIGUSR1(int sig);
 
 int fd;
@@ -61,7 +60,7 @@ int main()
 
   // Attachement à la mémoire partagée
 
-  if ((pShm = (char*)shmat(idShm,NULL,0)) == (char*)-1)
+  if((pShm = (char*)shmat(idShm,NULL,0)) == (char*)-1)
   {
     perror("Erreur de shmat");
     exit(1);
@@ -75,8 +74,6 @@ int main()
   pShm[51] = '\0';
   int indDebut = 25 - strlen(pub)/2;
   for (int i=0 ; i<strlen(pub) ; i++) pShm[indDebut + i] = pub[i];
-
-  sigsetjmp(env, 1);
 
   MESSAGE m;
   m.requete=UPDATE_PUB;
@@ -134,8 +131,4 @@ void handlerSIGUSR1(int sig)
   pShm[51] = '\0';
   int indDebut = 25 - strlen(pub)/2;
   for (int i=0 ; i<strlen(pub) ; i++) pShm[indDebut + i] = pub[i];
-
-  siglongjmp(env, 1);
-
-  
 }

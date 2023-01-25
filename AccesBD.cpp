@@ -36,11 +36,10 @@ int main(int argc,char* argv[])
   int fdRpipe = atoi(argv[1]);
 
   // Connexion à la base de donnée
-  // TO DO
   MYSQL* connexion;
 
   connexion = mysql_init(NULL);
-  if (mysql_real_connect(connexion,"localhost","Student","PassStudent1_","PourStudent",0,0,0) == NULL)
+  if(mysql_real_connect(connexion,"localhost","Student","PassStudent1_","PourStudent",0,0,0) == NULL)
   {
     fprintf(stderr,"(SERVEUR) Erreur de connexion à la base de données...\n");
     exit(1);  
@@ -56,25 +55,8 @@ int main(int argc,char* argv[])
 
   char requete[200];
 
-  /////////////////////////////////
-
 
   MYSQL_RES  *resultat;
-  //MYSQL_RES  *resultat2;  
-
-  // sprintf(requete,"select * from UNIX_FINAL");
-  // if(mysql_query(connexion,requete) != 0)
-  // {
-  //   fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
-  //   exit(1);
-  // }
-
-  // if((resultat = mysql_store_result(connexion))==NULL)
-  // {
-  //   fprintf(stderr, "Erreur de mysql_store_result: %s\n",mysql_error(connexion));
-  //   exit(1);
-  // }
-  /////////////////////////////////
 
   int test;
   int i;
@@ -82,7 +64,6 @@ int main(int argc,char* argv[])
   while(1)
   {
     // Lecture d'une requete sur le pipe
-    // TO DO
     int ret;
 
     if((ret = read(fdRpipe,&m, sizeof(MESSAGE)-sizeof(long))) < 0)
@@ -95,7 +76,7 @@ int main(int argc,char* argv[])
 
     switch(m.requete)
     {
-      case CONSULT :  // TO DO
+      case CONSULT : 
                       fprintf(stderr,"(ACCESBD %d) Requete CONSULT reçue de %d\n",getpid(),m.expediteur);
                       // Acces BD
               
@@ -113,27 +94,19 @@ int main(int argc,char* argv[])
                       }
 
 
-                      while (test==0 && (ligne = mysql_fetch_row(resultat)) != NULL) 
-                      {
-                        if(atoi(ligne[0]) == m.data1)
-                        {
-                          test=1;
-                        }
-                      }          
-
-                      //mysql_free_result(resultat);    
+                      while ((ligne = mysql_fetch_row(resultat)) != NULL && atoi(ligne[0]) != m.data1);//recherche du bon article en fct de l'id
+       
                       
-                      if(test==1)
+                      if(atoi(ligne[0]) == m.data1)
                       {
                         reponse.data1=atoi(ligne[0]);
                         strcpy(reponse.data2, ligne[1]);
                         strcpy(reponse.data3, ligne[3]);
                         strcpy(reponse.data4, ligne[4]);
-                        reponse.data5=atof(ligne[2]); //bizarre ca devrait pas marcher
+                        reponse.data5=atof(ligne[2]); //bizarre ca devrait pas marcher par rapport a gerant
                       }
                       else
                       {
-                        //pas trouve
                         reponse.data1=-1;
                       }         
 
@@ -143,8 +116,6 @@ int main(int argc,char* argv[])
                       reponse.type=m.expediteur;
                       reponse.requete=CONSULT;
 
-
-                  
                       if(msgsnd(idQ,&reponse,sizeof(MESSAGE)-sizeof(long), 0) == -1)
                       {
                         perror("(CADDIE CONSULT)Erreur de msgsnd");
@@ -156,7 +127,7 @@ int main(int argc,char* argv[])
 
                       break;
 
-      case ACHAT :    // TO DO
+      case ACHAT :  
                       fprintf(stderr,"(ACCESBD %d) Requete ACHAT reçue de %d\n",getpid(),m.expediteur);
                       // Acces BD
 
@@ -232,7 +203,7 @@ int main(int argc,char* argv[])
 
                       break;
 
-      case CANCEL :   // TO DO
+      case CANCEL : 
                       fprintf(stderr,"(ACCESBD %d) Requete CANCEL reçue de %d\n",getpid(),m.expediteur);
                       // Acces BD
 
@@ -284,8 +255,6 @@ int main(int argc,char* argv[])
       case EXIT   :   
                     fprintf(stderr,"(ACCESBD %d) Requete EXIT reçue de %d\n",getpid(),m.expediteur);
                     
-                    // mysql_free_result(resultat);
-                    // mysql_free_result(resultat2);
                     mysql_close(connexion);
                         
                     fprintf(stderr,"(ACCESBD) Base de donnee fermee\n");
