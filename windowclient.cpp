@@ -62,7 +62,7 @@ WindowClient::WindowClient(QWidget *parent) : QMainWindow(parent), ui(new Ui::Wi
 
     //Semaphore
 
-    if ((idSem = semget(CLE,6, IPC_EXCL | 0600)) == -1)
+    if ((idSem = semget(CLE,0,0)) == -1)
     {
       perror("Erreur de semget");
       exit(1);
@@ -496,6 +496,9 @@ void WindowClient::on_pushButtonAcheter_clicked()
     // TO DO (étape 5)
     // Envoi d'une requete ACHAT au serveur
 
+    if(getQuantite()<1)
+      return;
+
 
     MESSAGE m;
 
@@ -788,6 +791,10 @@ void handlerSIGUSR1(int sig)
                     break;
 
         case BUSY : // TO DO (étape 7)
+
+                    w->dialogueErreur("MAINTENANCE", "Serveur en maintenance, réessayez plus tard… Merci.");
+
+
                     break;
 
         default :

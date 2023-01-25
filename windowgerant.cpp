@@ -9,6 +9,7 @@ using namespace std;
 #include <sys/msg.h>
 #include <sys/sem.h>
 #include <string.h>
+#include "Semaphore.h"
 #include "protocole.h"
 
 int idArticleSelectionne = -1;
@@ -49,8 +50,15 @@ WindowGerant::WindowGerant(QWidget *parent) : QMainWindow(parent),ui(new Ui::Win
     // Récupération du sémaphore
     // TO DO
 
+    if((idSem = semget(CLE,0,0)) == -1)
+    {
+      perror("Erreur de semget");
+      exit(1);
+    }
+
+
     // Prise blocante du semaphore
-    // TO DO
+    sem_wait(6);
 
     // Connexion à la base de donnée
     connexion = mysql_init(NULL);
@@ -198,6 +206,7 @@ void WindowGerant::closeEvent(QCloseEvent *event)
 
   // Liberation du semaphore
   // TO DO
+  sem_signal(6);
 
   exit(0);
 }
@@ -210,6 +219,21 @@ void WindowGerant::on_pushButtonPublicite_clicked()
   fprintf(stderr,"(GERANT %d) Clic sur bouton Mettre a jour\n",getpid());
   // TO DO (étape 7)
   // Envoi d'une requete NEW_PUB au serveur
+
+  MESSAGE m;
+
+  m.requete=NEW_PUB;
+  m.type=1;
+  m.expediteur=getpid();
+
+  strcpy(m.data4,getPublicite());
+
+
+  if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+  {
+    perror("Erreur de msgsnd PAYER");
+    exit(1);
+  }  
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////

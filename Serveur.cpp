@@ -47,6 +47,26 @@ int main()
 
   struct sigaction A2;
 
+  //semaphore
+  if ((idSem = semget(CLE,0,0)) == -1)
+  {
+    if ((idSem = semget(CLE,7, IPC_CREAT | IPC_EXCL | 0600)) == -1)
+    {
+      perror("Erreur de semget");
+      exit(1);
+    }
+ 
+  }
+
+  if (semctl(idSem,6,SETVAL,1) == -1)
+  {
+    perror("Erreur de semctl (2)");
+    exit(1);
+  }
+
+
+  //
+
   // Armement de SIGCHLD
   A2.sa_handler = HandlerSIGCHLD;
   sigemptyset(&A2.sa_mask);
@@ -209,6 +229,32 @@ int main()
                       break;
       case LOGIN :    // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete LOGIN reçue de %d : --%d--%s--%s--\n",getpid(),m.expediteur,m.data1,m.data2,m.data3);
+                      
+                      
+                      if (semctl(idSem,6,GETVAL) == 0)
+                      {
+                        
+                        m.type=m.expediteur;
+                        m.expediteur=getpid();
+                        m.requete=BUSY;
+
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd serv");
+                          exit(1);
+                        }
+
+                        if(kill(m.type,SIGUSR1) == -1)
+                        {
+                          perror ("Erreur de kill");
+                          exit(1);
+                        } 
+
+
+                        break;
+                      }
+                        
+
 
                       int posi, login;
                       char log[50];
@@ -346,7 +392,28 @@ int main()
 
       case LOGOUT :   // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete LOGOUT reçue de %d\n",getpid(),m.expediteur);
-                      
+                      if (semctl(idSem,6,GETVAL) == 0)
+                      {
+                        
+                        m.type=m.expediteur;
+                        m.expediteur=getpid();
+                        m.requete=BUSY;
+
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd serv");
+                          exit(1);
+                        }
+
+                        if(kill(m.type,SIGUSR1) == -1)
+                        {
+                          perror ("Erreur de kill");
+                          exit(1);
+                        } 
+
+
+                        break;
+                      }
                       for (i=0 ; i<6 && tab->connexions[i].pidFenetre!= m.expediteur; i++);
 
                       if(i<6)
@@ -386,6 +453,26 @@ int main()
 
       case CONSULT :  // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete CONSULT reçue de %d\n",getpid(),m.expediteur);
+                      if (semctl(idSem,6,GETVAL) == 0)
+                      {
+                        
+                        m.type=m.expediteur;
+                        m.expediteur=getpid();
+                        m.requete=BUSY;
+
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd serv");
+                          exit(1);
+                        }
+                        if(kill(m.type,SIGUSR1) == -1)
+                        {
+                          perror ("Erreur de kill");
+                          exit(1);
+                        } 
+
+                        break;
+                      }
 
                       for (i=0 ;tab->connexions[i].pidFenetre!=m.expediteur; i++);
 
@@ -404,7 +491,27 @@ int main()
 
       case ACHAT :    // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete ACHAT reçue de %d\n",getpid(),m.expediteur);
+                      
+                      if (semctl(idSem,6,GETVAL) == 0)
+                      {
+                        
+                        m.type=m.expediteur;
+                        m.expediteur=getpid();
+                        m.requete=BUSY;
 
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd serv");
+                          exit(1);
+                        }
+                        if(kill(m.type,SIGUSR1) == -1)
+                        {
+                          perror ("Erreur de kill");
+                          exit(1);
+                        } 
+
+                        break;
+                      }
                       for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
 
                       m.type=tab->connexions[i].pidCaddie;
@@ -419,7 +526,27 @@ int main()
 
       case CADDIE :   // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete CADDIE reçue de %d\n",getpid(),m.expediteur);
+                      
+                      if (semctl(idSem,6,GETVAL) == 0)
+                      {
+                        
+                        m.type=m.expediteur;
+                        m.expediteur=getpid();
+                        m.requete=BUSY;
 
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd serv");
+                          exit(1);
+                        }
+                        if(kill(m.type,SIGUSR1) == -1)
+                        {
+                          perror ("Erreur de kill");
+                          exit(1);
+                        } 
+
+                        break;
+                      }
                       for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
 
                       m.type=tab->connexions[i].pidCaddie;
@@ -436,7 +563,26 @@ int main()
 
       case CANCEL :   // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete CANCEL reçue de %d\n",getpid(),m.expediteur);
-                      
+                      if (semctl(idSem,6,GETVAL) == 0)
+                      {
+                        
+                        m.type=m.expediteur;
+                        m.expediteur=getpid();
+                        m.requete=BUSY;
+
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd serv");
+                          exit(1);
+                        }
+                        if(kill(m.type,SIGUSR1) == -1)
+                        {
+                          perror ("Erreur de kill");
+                          exit(1);
+                        } 
+
+                        break;
+                      }                     
                       for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
 
                       reponse.type=tab->connexions[i].pidCaddie;
@@ -453,7 +599,26 @@ int main()
 
       case CANCEL_ALL : // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete CANCEL_ALL reçue de %d\n",getpid(),m.expediteur);
+                      if (semctl(idSem,6,GETVAL) == 0)
+                      {
+                        
+                        m.type=m.expediteur;
+                        m.expediteur=getpid();
+                        m.requete=BUSY;
 
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd serv");
+                          exit(1);
+                        }
+                        if(kill(m.type,SIGUSR1) == -1)
+                        {
+                          perror ("Erreur de kill");
+                          exit(1);
+                        } 
+
+                        break;
+                      }
                       for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
 
                       reponse.type=tab->connexions[i].pidCaddie;
@@ -468,7 +633,26 @@ int main()
 
       case PAYER : // TO DO
                       fprintf(stderr,"(SERVEUR %d)Requete PAYER reçue de %d\n",getpid(),m.expediteur);
+                      if (semctl(idSem,6,GETVAL) == 0)
+                      {
+                        
+                        m.type=m.expediteur;
+                        m.expediteur=getpid();
+                        m.requete=BUSY;
 
+                        if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                        {
+                          perror("Erreur de msgsnd serv");
+                          exit(1);
+                        }
+                        if(kill(m.type,SIGUSR1) == -1)
+                        {
+                          perror ("Erreur de kill");
+                          exit(1);
+                        } 
+
+                        break;
+                      }
                       for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
 
                       reponse.type=tab->connexions[i].pidCaddie;
@@ -484,6 +668,21 @@ int main()
 
       case NEW_PUB :  // TO DO
                       fprintf(stderr,"(SERVEUR %d) Requete NEW_PUB reçue de %d\n",getpid(),m.expediteur);
+
+                      m.type=idPubli;
+                      m.expediteur=getpid();
+
+                      if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
+                      {
+                        perror("Erreur de msgsnd PAYER");
+                        exit(1);
+                      }  
+                      if(kill(idPubli,SIGUSR1) == -1)
+                      {
+                        perror ("Erreur de kill");
+                        exit(1);
+                      } 
+
                       break;
     }
 
@@ -522,29 +721,29 @@ void HandlerSIGINT(int sig)
   int i;
   int idClient;
 
-  fprintf(stderr,"(SERVEUR)EXIT DES CLIENT(S) et CADDIE(S) CONNECTES\n");
+  // fprintf(stderr,"(SERVEUR)EXIT DES CLIENT(S) et CADDIE(S) CONNECTES\n");
 
-  for (i=0 ; i<6; i++)
-  {
-    if(tab->connexions[i].pidFenetre != 0)
-    {
-      idClient=tab->connexions[i].pidFenetre;
-      if(kill(idClient, SIGTERM) == -1)
-      {
-        perror ("Erreur de kill");
-        exit(1);
-      }      
-    }    
-    if(tab->connexions[i].pidCaddie != 0)
-    {
-      if (kill(tab->connexions[i].pidCaddie, SIGTERM) == -1)
-      {
-        perror("Error sending SIGTERM signal to Publicite process");
-        exit(1);
-      }
-    }
+  // for (i=0 ; i<6; i++)
+  // {
+  //   if(tab->connexions[i].pidFenetre != 0)
+  //   {
+  //     idClient=tab->connexions[i].pidFenetre;
+  //     if(kill(idClient, SIGTERM) == -1)
+  //     {
+  //       perror ("Erreur de kill");
+  //       exit(1);
+  //     }      
+  //   }    
+  //   if(tab->connexions[i].pidCaddie != 0)
+  //   {
+  //     if (kill(tab->connexions[i].pidCaddie, SIGTERM) == -1)
+  //     {
+  //       perror("Error sending SIGTERM signal to Publicite process");
+  //       exit(1);
+  //     }
+  //   }
 
-  }
+  // }
 
   //exit publi
 
@@ -580,6 +779,15 @@ void HandlerSIGINT(int sig)
     perror("Erreur de msgctl");
     exit(1);
   }
+
+  fprintf(stderr,"(SERVEUR)SUPPRESSION ENSEMBLE DE SEMAPHORE\n");
+
+  if (semctl(idSem, 0, IPC_RMID) == -1)
+  {
+    perror("Erreur de semctl (2)");
+    exit(1);
+  }
+
 
   fprintf(stderr,"(SERVEUR)SUPPRESSION MEMOIRE PARTAGEE\n");
 

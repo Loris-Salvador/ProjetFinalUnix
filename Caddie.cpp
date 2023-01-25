@@ -60,7 +60,7 @@ int main(int argc,char* argv[])
 
    //Semaphore
 
-    if ((idSem = semget(CLE,6, IPC_EXCL | 0600)) == -1)
+    if ((idSem = semget(CLE,0, 0)) == -1)
     {
       perror("Erreur de semget");
       exit(1);
@@ -109,7 +109,7 @@ int main(int argc,char* argv[])
       exit(1);
     }
 
-    alarm(15);
+    alarm(60);
 
     test=0;
     same=0;

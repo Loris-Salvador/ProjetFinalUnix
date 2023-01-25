@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <string.h>
 #include <sys/types.h>
+#include <setjmp.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -15,6 +16,7 @@
 
 int idQ, idShm;
 char *pShm;
+sigjmp_buf env;
 void handlerSIGUSR1(int sig);
 
 int fd;
@@ -23,16 +25,16 @@ int main()
 {
   // Armement des signaux
   // TO DO
-  // struct sigaction A;
-  // A.sa_handler =handlerSIGUSR1;
-  // sigemptyset(&A.sa_mask);
-  // A.sa_flags = 0;
+  struct sigaction A;
+  A.sa_handler =handlerSIGUSR1;
+  sigemptyset(&A.sa_mask);
+  A.sa_flags = 0;
 
-  // if(sigaction(SIGUSR1,&A,NULL) == -1)
-  // {
-  //   perror("Erreur de sigaction");
-  //   exit(1);
-  // }
+  if(sigaction(SIGUSR1,&A,NULL) == -1)
+  {
+    perror("Erreur de sigaction");
+    exit(1);
+  }
 
   //Masquage des signaux
   sigset_t mask;
@@ -74,10 +76,15 @@ int main()
   int indDebut = 25 - strlen(pub)/2;
   for (int i=0 ; i<strlen(pub) ; i++) pShm[indDebut + i] = pub[i];
 
+  sigsetjmp(env, 1);
+
+  fprintf(stderr,"YOOO\n");
+
   MESSAGE m;
   m.requete=UPDATE_PUB;
   m.expediteur=getpid();
   m.type=1;
+
 
   while(1)
   {
@@ -88,6 +95,10 @@ int main()
       perror("Erreur de msgsnd PUB");
       exit(1);
     }
+
+
+
+    
 
     sleep(1); 
 
@@ -110,7 +121,29 @@ void handlerSIGUSR1(int sig)
 {
   fprintf(stderr,"(PUBLICITE %d) Nouvelle publicite !\n",getpid());
 
+  MESSAGE m;
+
   // Lecture message NEW_PUB
 
+    if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),getpid(),0) == -1)
+    {
+      perror("(PUBLICITE) Erreur de msgrcv");
+      exit(1);
+    }
+
   // Mise en place de la publicité en mémoire partagée
+
+  char pub[51];
+  strcpy(pub,m.data4);
+
+  for (int i=0 ; i<=50 ; i++) pShm[i] = ' ';
+  pShm[51] = '\0';
+  int indDebut = 25 - strlen(pub)/2;
+  for (int i=0 ; i<strlen(pub) ; i++) pShm[indDebut + i] = pub[i];
+
+  fprintf(stderr,"YOOO2\n");
+
+  siglongjmp(env, 1);
+
+  
 }
