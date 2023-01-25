@@ -66,8 +66,6 @@ int main(int argc,char* argv[])
       exit(1);
     }
 
-   /////////////
-
   // Recuperation de l'identifiant de la file de messages
   fprintf(stderr,"(CADDIE %d) Recuperation de l'id de la file de messages\n",getpid());
   if ((idQ = msgget(CLE,0)) == -1)
@@ -75,14 +73,6 @@ int main(int argc,char* argv[])
     perror("(CADDIE) Erreur de msgget");
     exit(1);
   }
-
-  // Connexion à la base de donnée etape 4
-  // connexion = mysql_init(NULL);
-  // if (mysql_real_connect(connexion,"localhost","Student","PassStudent1_","PourStudent",0,0,0) == NULL)
-  // {
-  //   fprintf(stderr,"(SERVEUR) Erreur de connexion à la base de données...\n");
-  //   exit(1);  
-  // }
 
 
   MESSAGE m;
@@ -112,8 +102,6 @@ int main(int argc,char* argv[])
 
     test=0;
     same=0;
-
-
 
     switch(m.requete)
     {

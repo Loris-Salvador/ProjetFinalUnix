@@ -479,8 +479,7 @@ void WindowClient::on_pushButtonAcheter_clicked()
 
     if(getQuantite()<1)
       return;
-
-
+      
     MESSAGE m;
 
     m.type=1;
@@ -622,7 +621,7 @@ void handlerSIGUSR1(int sig)
     MESSAGE m;
     MESSAGE reponse;
   
-    if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),getpid(),IPC_NOWAIT) != -1)  // !!! a modifier en temps voulu !!!
+    if(msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),getpid(),IPC_NOWAIT) != -1)  // !!! a modifier en temps voulu !!!
     {
       switch(m.requete)
       {
@@ -705,18 +704,16 @@ void handlerSIGUSR1(int sig)
                         perror("Erreur de msgsnd");
                         exit(1);
                       }
-
-
                     }
                     break;
 
         case CADDIE : 
-
                       if(m.data1!=-1)
                       {
                         w->ajouteArticleTablePanier(m.data2, m.data5, atoi(m.data3));
                         totalCaddie=totalCaddie+(atoi(m.data3)*m.data5);
                         w->setTotal(totalCaddie);
+
                         sem_signal(numSem);
                       }
                       else
@@ -734,9 +731,6 @@ void handlerSIGUSR1(int sig)
                           exit(1);
                         }
                       }
-
-        
-
 
                     break;  
 

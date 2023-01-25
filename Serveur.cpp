@@ -548,7 +548,6 @@ int main()
                       //verification gerant connecté(maintenance)
                       if (semctl(idSem,6,GETVAL) == 0)
                       {
-                        
                         m.type=m.expediteur;
                         m.expediteur=getpid();
                         m.requete=BUSY;
@@ -617,7 +616,7 @@ int main()
       case PAYER : 
                       fprintf(stderr,"(SERVEUR %d)Requete PAYER reçue de %d\n",getpid(),m.expediteur);
                       //verification gerant connecté(maintenance)
-                      if (semctl(idSem,6,GETVAL) == 0)
+                      if(semctl(idSem,6,GETVAL) == 0)
                       {
                         
                         m.type=m.expediteur;
@@ -637,7 +636,7 @@ int main()
 
                         break;
                       }
-                      for (i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
+                      for(i=0 ; tab->connexions[i].pidFenetre!=m.expediteur ; i++);
 
                       reponse.type=tab->connexions[i].pidCaddie;
                       reponse.requete=PAYER;

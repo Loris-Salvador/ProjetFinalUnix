@@ -231,7 +231,7 @@ void WindowGerant::on_pushButtonPublicite_clicked()
 
   if(msgsnd(idQ,&m,sizeof(MESSAGE)-sizeof(long), 0) == -1)
   {
-    perror("Erreur de msgsnd PAYER");
+    perror("Erreur de msgsnd GERANT");
     exit(1);
   }  
 }

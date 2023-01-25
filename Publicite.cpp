@@ -116,11 +116,11 @@ void handlerSIGUSR1(int sig)
 
   // Lecture message NEW_PUB
 
-    if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),getpid(),0) == -1)
-    {
-      perror("(PUBLICITE) Erreur de msgrcv");
-      exit(1);
-    }
+  if (msgrcv(idQ,&m,sizeof(MESSAGE)-sizeof(long),getpid(),0) == -1)
+  {
+    perror("(PUBLICITE) Erreur de msgrcv");
+    exit(1);
+  }
 
   // Mise en place de la publicité en mémoire partagée
 

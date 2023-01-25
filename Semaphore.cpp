@@ -10,7 +10,7 @@ int sem_wait(int num)
     struct sembuf action;
     action.sem_num = num;
     action.sem_op = -1;
-    action.sem_flg = SEM_UNDO;
+    action.sem_flg = SEM_UNDO;//si crash restitue etat initial
     return semop(idSem,&action,1);
 }
 int sem_signal(int num)

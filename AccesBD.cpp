@@ -93,10 +93,8 @@ int main(int argc,char* argv[])
                         exit(1);
                       }
 
-
                       while ((ligne = mysql_fetch_row(resultat)) != NULL && atoi(ligne[0]) != m.data1);//recherche du bon article en fct de l'id
-       
-                      
+                             
                       if(atoi(ligne[0]) == m.data1)
                       {
                         reponse.data1=atoi(ligne[0]);
@@ -145,6 +143,7 @@ int main(int argc,char* argv[])
 
                       i=0;
 
+
                       while (test==0 && (ligne = mysql_fetch_row(resultat)) != NULL) 
                       {
                         
@@ -170,11 +169,7 @@ int main(int argc,char* argv[])
                             exit(1);
                           }
 
-                          mysql_data_seek(resultat, (i-1));
-                          
-                          ligne = mysql_fetch_row(resultat);
-
-                          strcpy(reponse.data3, m.data2);
+                          strcpy(reponse.data3, m.data2);//quantite
 
                         }
                         else
@@ -190,7 +185,6 @@ int main(int argc,char* argv[])
                         reponse.expediteur=getpid();
                         reponse.requete=ACHAT;
                         reponse.type=m.expediteur;
-
                   
                         mysql_free_result(resultat);    
 
@@ -221,7 +215,6 @@ int main(int argc,char* argv[])
 
                       // Mise à jour du stock en BD
 
-                      test=0;
 
                       while (test==0 && (ligne = mysql_fetch_row(resultat)) != NULL) 
                       {
@@ -247,7 +240,9 @@ int main(int argc,char* argv[])
                           fprintf(stderr, "Erreur de mysql_query: %s\n",mysql_error(connexion));
                           exit(1);
                         }    
-                      }                 
+                      }               
+
+                      mysql_free_result(resultat);  
 
 
                       break;
